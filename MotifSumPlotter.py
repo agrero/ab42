@@ -270,4 +270,3 @@ if __name__ == "__main__":
     plotter.plot2()
 
     plotter.fig.write_json(writepath)
-    # plotter.fig.show()
