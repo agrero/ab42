@@ -93,142 +93,44 @@ class MotifSumPlotter(_MotifSumPlotter):
             self.mean.index.get_level_values("motif")
         )
 
-    def plot2(self, ncols:int=3, nrows:int=2, n_keep:int=10, sec_struc_sort:str="AlphaHelix") -> None:
-        
-        self.fig = make_subplots(
-            rows=nrows, cols=ncols,
-            subplot_titles=self._col_order,
-            vertical_spacing=0.2,
-            showlegend=False
-        )
+    def plot_single(self, sec_struc_label:str, n_keep:int) -> None:
 
-        self.fig.update_annotations(
-            font=self.subtitle_font
-        )
+        self.fig = go.Figure()
 
-        data = self.mean.sort_values(by=sec_struc_sort, ascending=False)
-        if n_keep > data.shape[0]: n_keep = data.shape[0]
-
+        data = self.mean.sort_values(by=sec_struc_label, ascending=False)
         data = data.iloc[:n_keep]
+
         error = self.error.loc[data.index, :]
 
-        for sec_struc_label in self._col_order:
-            x = data.index.get_level_values("motif")
-            y = data.loc[:,sec_struc_label]
-            error_high = error.loc[:,sec_struc_label]
-            error_low = np.where(
-                y - error_high < 0,
-                y, error_high
-            )
-  
-            bar = go.Bar(
-                x = x,
-                y = y,
-                name=sec_struc_label,
-                error_y=dict(
-                    type="data",
-                    symmetric=False,
-                    array=error_high,
-                    arrayminus=error_low
-                )
-            )
+        x = data.index.get_level_values("motif")
+        y = data.loc[:, sec_struc_label]
 
-            self.fig.add_trace(
-                trace=bar,
-                row=self.row_cols[sec_struc_label][0],
-                col=self.row_cols[sec_struc_label][1]
-            )
- 
-        # UPDATE PLOT TITLE
-        self.fig.update_layout(
-            title = dict(
-                text=f"Motif Length: {self._motif_len * 3}",
-                font=self.title_font
+        error_high = error.loc[:, sec_struc_label]
+        error_low = np.where(
+            y - error_high < 0,
+            y, error_high
+        )
+
+        bar = go.Bar(
+            x = x,
+            y = y,
+            error_y=dict(
+                type="data",
+                symmetric=False,
+                array=error_high,
+                arrayminus=error_low
             )
         )
-
-        # UPDATE AXES FONT
-        self.fig.update_yaxes(
-            title_font=self.axis_title_font,
-            tickfont=self.axis_tick_font,
-        )
-
-        self.fig.update_xaxes(
-            title_font=self.axis_title_font,
-            tickfont=self.axis_tick_font,
-        )
-
-        # ADD AXES LABELS TO INITIAL PLOT
-
-        self.fig.update_yaxes(
-            title_text="Counts",
-            row=2,col=1
-        )
-
-        self.fig.update_xaxes(
-            title_text="Motif",
-            row=2, col=1
-        )
-
-
-    def plot(self, ncols:int=3, nrows:int=2, n_keep:int=20) -> None:
-
-        self.fig = make_subplots(
-            rows=nrows, cols=ncols,
-            subplot_titles=self._col_order,
-            vertical_spacing=0.15
-        )
-
-        self.fig.update_annotations(
-            font=self.subtitle_font
-        )
-
-        for sec_struc_label in self._col_order:
-
-            data = self.mean.loc[:,[sec_struc_label]]
-            data = data.sort_values(by=sec_struc_label, ascending=False)
-
-            error = self.error.loc[data.index, sec_struc_label]
-            error_low = np.where(
-                data[sec_struc_label]-error < 0, data[sec_struc_label], error
-            )
-
-            if n_keep > data.shape[0]: n_keep = data.shape[0]
-            data = data.iloc[:n_keep]
-
-            for ndx, motif in enumerate(data.index.get_level_values("motif")):
-
-                bar = go.Bar(
-                    x=[ndx],
-                    y=data.loc[motif,[sec_struc_label]],
-                    legendgroup=motif,
-                    legendgrouptitle_text=motif,
-                    name=sec_struc_label,
-                    error_y=dict(
-                        type="data",
-                        symmetric=False,
-                        array=self.error.loc[motif, [sec_struc_label]],
-                        arrayminus=error_low[[ndx]]
-                    ),
-                    marker_color=self.motif_colors[motif],
-                    hovertemplate=f"<b>Motif:</b> {motif}<br><extra></extra>"
-                )
-
-                self.fig.add_trace(
-                    trace=bar,
-                    row=self.row_cols[sec_struc_label][0],
-                    col=self.row_cols[sec_struc_label][1]
-                )
-
-        self.fig.update_layout(legend=dict(groupclick="toggleitem"))
-
+        self.fig.add_trace(trace=bar)
 
         # UPDATE PLOT TITLE
         self.fig.update_layout(
             title = dict(
-                text=f"Motif Length: {self._motif_len * 3}",
+                text=sec_struc_label,
                 font=self.title_font
             ),
+            xaxis_title="Motif",
+            yaxis_title="Mean Count (+/- std dev)"
         )
 
         # UPDATE AXES FONT
@@ -240,33 +142,34 @@ class MotifSumPlotter(_MotifSumPlotter):
         self.fig.update_xaxes(
             title_font=self.axis_title_font,
             tickfont=self.axis_tick_font,
-        )
-
-        # ADD AXES LABELS TO INITIAL PLOT
-
-        self.fig.update_yaxes(
-            title_text="Counts",
-            row=2,col=1
-        )
-
-        self.fig.update_xaxes(
-            title_text="Motif",
-            row=2, col=1
         )
 
 if __name__ == "__main__":
+    sec_elements = [
+        "AlphaHelix",
+        "Strand",
+        "Coil",
+        "310Helix",
+        "Bridge",
+        "Turn"
+    ]
+    for i in range(3, 16, 3):
+        
+        root = f"motiflen_{i}"
+        pdir = os.path.join("data")
+        data_filename = f"{root}.parquet"
+        data_filepath = os.path.join(pdir, data_filename)
+        write_dir = os.path.join("plots", root)
 
-    root = "motiflen_3"
-    pdir = os.path.join("data")
-    filename = f"{root}.parquet"
-    filepath = os.path.join(pdir, filename)
 
-    writepath = os.path.join("plots", f"{root}_v2.json")
+        data = pd.read_parquet(data_filepath).astype("int64").drop(["PiHelix"], axis=1)
 
-    data = pd.read_parquet(filepath).astype("int64").drop(["PiHelix"], axis=1)
+        plotter = MotifSumPlotter(data)
 
-    plotter = MotifSumPlotter(data)
+        os.makedirs(os.path.join(write_dir), exist_ok=True)
 
-    plotter.plot2()
-
-    plotter.fig.write_json(writepath)
+        for sec_element in sec_elements:
+            root_element = f"{root}_{sec_element}"
+            writepath = os.path.join(write_dir, f"{root_element}.json")
+            plotter.plot_single(sec_element, n_keep=15)  
+            plotter.fig.write_json(writepath)
